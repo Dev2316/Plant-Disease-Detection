@@ -3,9 +3,13 @@ It's a last semester capstone 2 group project
 
 ## Team Members :
 Dev R Patel 
+
 Dev S Patel 
+
 Maharshi vyas
+
 Parth Modi
+
 Harsh Patel
 
 
