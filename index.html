@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LeafScan — Plant Disease Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --sage:       #3d6b4f;
+  --sage-dark:  #2a4d38;
+  --sage-mid:   #4e8464;
+  --sage-light: #eaf4ee;
+  --sage-pale:  #f4faf6;
+  --amber:      #d4862a;
+  --amber-light:#fef3e2;
+  --red:        #c94040;
+  --red-light:  #fdf0f0;
+  --ink:        #161f18;
+  --muted:      #5a7062;
+  --border:     #d4e3d8;
+  --card:       #ffffff;
+  --bg:         #f2f7f4;
+  --shadow:     0 2px 24px rgba(30,70,45,.08);
+  --shadow-lg:  0 8px 48px rgba(30,70,45,.14);
+  --r:          16px;
+  --r-sm:       10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden}
+
+/* ═══ PAGES ═══ */
+.page{display:none;min-height:100vh;animation:fadeIn .35s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══ NAV ═══ */
+.navbar{
+  background:var(--sage-dark);height:66px;display:flex;
+  align-items:center;justify-content:space-between;
+  padding:0 32px;position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 20px rgba(0,0,0,.22);
+}
+.nav-brand{display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:none}
+.nav-icon{width:36px;height:36px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.nav-name{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:700;color:#fff;letter-spacing:-.01em}
+.nav-links{display:flex;align-items:center;gap:6px}
+.nav-btn{background:none;border:none;color:rgba(255,255,255,.75);font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;padding:8px 14px;border-radius:8px;cursor:pointer;transition:all .18s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.nav-btn:hover{color:#fff;background:rgba(255,255,255,.12)}
+.nav-btn.active{color:#fff;background:rgba(255,255,255,.18)}
+.nav-btn.primary{background:var(--amber);color:#fff;font-weight:600}
+.nav-btn.primary:hover{background:#c0771f}
+.nav-user{display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.88rem;color:#fff;cursor:pointer;flex-shrink:0}
+
+/* ═══ BUTTONS ═══ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:all .18s;text-decoration:none}
+.btn-primary{background:var(--sage);color:#fff;padding:13px 28px;font-size:.95rem;box-shadow:0 4px 16px rgba(61,107,79,.3)}
+.btn-primary:hover{background:var(--sage-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(61,107,79,.38)}
+.btn-outline{background:transparent;color:var(--sage);border:1.5px solid var(--sage);padding:12px 26px;font-size:.93rem}
+.btn-outline:hover{background:var(--sage-light)}
+.btn-ghost{background:transparent;color:var(--muted);padding:10px 16px;font-size:.88rem}
+.btn-ghost:hover{background:var(--sage-light);color:var(--sage)}
+.btn-danger{background:var(--red);color:#fff;padding:10px 20px;font-size:.87rem}
+.btn-danger:hover{background:#b53535}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none!important}
+
+/* ═══ FORM ELEMENTS ═══ */
+.field{margin-bottom:18px}
+.field label{display:block;font-size:.83rem;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+.field input{width:100%;background:#fff;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:13px 16px;font-family:'DM Sans',sans-serif;font-size:.95rem;color:var(--ink);transition:border-color .18s,box-shadow .18s;outline:none}
+.field input:focus{border-color:var(--sage);box-shadow:0 0 0 3px rgba(61,107,79,.12)}
+.field input::placeholder{color:#b0c0b5}
+
+/* ═══ HOME / LANDING ═══ */
+#page-home .hero{
+  background:linear-gradient(140deg,#182e20 0%,#244533 50%,#2e5a3e 100%);
+  padding:80px 24px 72px;text-align:center;position:relative;overflow:hidden;
+}
+#page-home .hero::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(circle at 15% 85%,rgba(212,134,42,.18) 0%,transparent 45%),
+    radial-gradient(circle at 80% 10%,rgba(255,255,255,.06) 0%,transparent 38%),
+    radial-gradient(circle at 50% 50%,rgba(78,132,100,.15) 0%,transparent 60%);
+}
+.hero-eyebrow{
+  position:relative;display:inline-flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;padding:6px 16px;font-size:.78rem;color:rgba(255,255,255,.8);
+  letter-spacing:.07em;text-transform:uppercase;margin-bottom:24px;
+}
+.hero-dot{width:7px;height:7px;border-radius:50%;background:#5acd7a;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+.hero h1{
+  position:relative;font-family:'Fraunces',serif;
+  font-size:clamp(2.4rem,5vw,3.6rem);font-weight:700;
+  color:#fff;line-height:1.1;margin-bottom:16px;letter-spacing:-.02em;
+}
+.hero h1 em{color:#7dd98f;font-style:italic}
+.hero-sub{position:relative;font-size:1.05rem;color:rgba(255,255,255,.65);max-width:500px;margin:0 auto 36px;line-height:1.75;font-weight:300}
+.hero-actions{position:relative;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero-cta{
+  background:#fff;color:var(--sage-dark);padding:15px 34px;border-radius:var(--r-sm);
+  font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;border:none;cursor:pointer;
+  box-shadow:0 4px 24px rgba(0,0,0,.2);transition:all .2s;
+}
+.hero-cta:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.28)}
+.hero-sec{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  color:#fff;padding:14px 28px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;
+  font-size:.95rem;font-weight:500;cursor:pointer;transition:all .2s;
+}
+.hero-sec:hover{background:rgba(255,255,255,.15)}
+.hero-stats{
+  position:relative;display:flex;gap:0;justify-content:center;
+  margin-top:52px;background:rgba(0,0,0,.2);border-radius:var(--r);
+  max-width:560px;margin-left:auto;margin-right:auto;
+  border:1px solid rgba(255,255,255,.1);overflow:hidden;
+}
+.stat{flex:1;padding:20px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.08)}
+.stat:last-child{border-right:none}
+.stat-n{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:700;color:#fff}
+.stat-l{font-size:.72rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+
+/* Features section */
+.section{max-width:1040px;margin:0 auto;padding:64px 24px}
+.sec-label{font-size:.75rem;font-weight:600;color:var(--sage);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.sec-title{font-family:'Fraunces',serif;font-size:clamp(1.7rem,3vw,2.3rem);font-weight:600;color:var(--ink);line-height:1.2;margin-bottom:14px}
+.sec-sub{font-size:.97rem;color:var(--muted);max-width:480px;line-height:1.7}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:44px}
+.feat-card{
+  background:var(--card);border-radius:var(--r);padding:28px;
+  box-shadow:var(--shadow);border:1px solid var(--border);
+  transition:transform .2s,box-shadow .2s;
+}
+.feat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.feat-ico{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:16px}
+.feat-ico.green{background:var(--sage-light)}
+.feat-ico.amber{background:var(--amber-light)}
+.feat-ico.blue{background:#e8f2fd}
+.feat-ico.purple{background:#f0eafd}
+.feat-card h3{font-family:'Fraunces',serif;font-size:1.12rem;font-weight:600;margin-bottom:8px;color:var(--ink)}
+.feat-card p{font-size:.88rem;color:var(--muted);line-height:1.65}
+
+/* How it works */
+.hiw-section{background:var(--sage-dark);padding:64px 24px;text-align:center}
+.hiw-inner{max-width:900px;margin:0 auto}
+.hiw-section .sec-label{color:rgba(255,255,255,.55)}
+.hiw-section .sec-title{color:#fff;margin:0 auto 48px}
+.steps{display:flex;gap:0;justify-content:center;flex-wrap:wrap}
+.step{flex:0 0 220px;padding:28px 20px;text-align:center;position:relative}
+.step::after{content:'→';position:absolute;right:-10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.25);font-size:1.3rem}
+.step:last-child::after{display:none}
+.step-num{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:#fff;margin:0 auto 16px}
+.step h4{font-size:.95rem;font-weight:600;color:#fff;margin-bottom:7px}
+.step p{font-size:.82rem;color:rgba(255,255,255,.55);line-height:1.6}
+
+/* CTA banner */
+.cta-banner{background:linear-gradient(135deg,var(--amber) 0%,#c07020 100%);padding:56px 24px;text-align:center}
+.cta-banner h2{font-family:'Fraunces',serif;font-size:2rem;color:#fff;margin-bottom:12px}
+.cta-banner p{color:rgba(255,255,255,.8);margin-bottom:28px;font-size:.97rem}
+
+/* ═══ AUTH PAGES ═══ */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+.auth-card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow-lg);padding:44px;width:100%;max-width:440px;border:1px solid var(--border)}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo span{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:700;color:var(--sage)}
+.auth-logo small{display:block;font-size:.8rem;color:var(--muted);margin-top:3px}
+.auth-title{font-family:'Fraunces',serif;font-size:1.5rem;color:var(--ink);margin-bottom:6px}
+.auth-sub{font-size:.88rem;color:var(--muted);margin-bottom:28px;line-height:1.6}
+.auth-footer{text-align:center;margin-top:20px;font-size:.87rem;color:var(--muted)}
+.auth-footer a{color:var(--sage);text-decoration:none;font-weight:600}
+.auth-footer a:hover{text-decoration:underline}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted);font-size:.8rem}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.err-msg{background:var(--red-light);color:var(--red);border:1px solid rgba(201,64,64,.2);border-radius:8px;padding:10px 14px;font-size:.85rem;margin-bottom:14px;display:none}
+.suc-msg{background:var(--sage-light);color:var(--sage-dark);border:1px solid rgba(61,107,79,.2);border-radius:8px;padding:10px 14px;font-size:.85rem;margin-bottom:14px;display:none}
+
+/* ═══ APP LAYOUT ═══ */
+.app-layout{display:flex;min-height:calc(100vh - 66px)}
+.sidebar{
+  width:240px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);
+  padding:24px 16px;position:sticky;top:66px;height:calc(100vh - 66px);overflow-y:auto;
+}
+.sidebar-section{margin-bottom:8px}
+.sidebar-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:8px 12px 4px}
+.sidebar-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);
+  font-size:.9rem;font-weight:500;color:var(--ink);cursor:pointer;transition:all .15s;
+  border:none;background:none;width:100%;text-align:left;
+}
+.sidebar-item:hover{background:var(--sage-light);color:var(--sage)}
+.sidebar-item.active{background:var(--sage-light);color:var(--sage);font-weight:600}
+.sidebar-item .ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;background:var(--bg);flex-shrink:0}
+.sidebar-item.active .ico{background:var(--sage);font-size:.9rem}
+.app-content{flex:1;padding:32px;overflow-y:auto;max-width:900px}
+
+/* ═══ DETECT PAGE ═══ */
+.page-title{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:600;margin-bottom:6px}
+.page-sub{font-size:.9rem;color:var(--muted);margin-bottom:28px}
+.upload-zone{
+  background:var(--card);border:2px dashed var(--border);border-radius:var(--r);
+  padding:52px 30px;text-align:center;cursor:pointer;position:relative;
+  transition:all .22s;box-shadow:var(--shadow);
+}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--sage);background:var(--sage-pale);transform:translateY(-2px)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.up-circle{width:72px;height:72px;border-radius:50%;background:var(--sage-light);border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:1.8rem}
+.upload-zone h3{font-size:1.1rem;font-weight:600;margin-bottom:6px}
+.upload-zone p{font-size:.85rem;color:var(--muted)}
+.preview-panel{display:none;margin-top:24px}
+.prev-wrap{background:var(--card);border-radius:var(--r);padding:24px;box-shadow:var(--shadow);display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;border:1px solid var(--border)}
+.prev-img-box{flex:0 0 200px;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.prev-img-box img{width:100%;height:200px;object-fit:cover;display:block}
+.prev-info{flex:1;min-width:180px}
+.fname-badge{display:inline-flex;align-items:center;gap:6px;background:var(--sage-light);border-radius:6px;padding:5px 12px;font-size:.8rem;color:var(--sage);font-weight:500;margin-bottom:14px}
+.spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.chg-link{font-size:.82rem;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:8px;display:inline-block}
+
+/* Result card */
+.result-wrap{display:none;margin-top:28px;animation:fadeIn .4s ease}
+.result-card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;border:1px solid var(--border)}
+.res-header{padding:20px 26px;display:flex;align-items:center;gap:16px}
+.res-header.healthy{background:linear-gradient(135deg,var(--sage) 0%,var(--sage-mid) 100%)}
+.res-header.disease{background:linear-gradient(135deg,var(--red) 0%,#e05050 100%)}
+.res-emoji{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.res-lbl{font-size:.67rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.1em}
+.res-disease-name{font-family:'Fraunces',serif;font-size:1.4rem;color:#fff;margin-top:2px}
+.res-body{padding:26px}
+.conf-block{display:flex;align-items:center;gap:18px;margin-bottom:24px}
+.conf-pct{font-family:'Fraunces',serif;font-size:3rem;line-height:1;flex-shrink:0}
+.conf-pct.healthy{color:var(--sage)}
+.conf-pct.disease{color:var(--red)}
+.conf-right{flex:1}
+.conf-label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
+.conf-bar{background:var(--sage-light);border-radius:999px;height:10px;overflow:hidden}
+.conf-fill{height:100%;border-radius:999px;transition:width 1.1s cubic-bezier(.22,1,.36,1)}
+.conf-fill.healthy{background:var(--sage)}
+.conf-fill.disease{background:var(--red)}
+.breakdown-title{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px}
+.prob-row{display:flex;align-items:center;gap:12px;margin-bottom:9px}
+.prob-name{flex:0 0 190px;font-size:.83rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prob-track{flex:1;background:#edf2ee;border-radius:999px;height:7px;overflow:hidden}
+.prob-bar{height:100%;border-radius:999px;transition:width .9s cubic-bezier(.22,1,.36,1)}
+.prob-bar.healthy{background:var(--sage)}
+.prob-bar.disease{background:var(--red)}
+.prob-pct{font-size:.8rem;color:var(--muted);flex:0 0 44px;text-align:right}
+
+/* AI info panel */
+.ai-panel{background:var(--sage-pale);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-top:20px}
+.ai-panel-title{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:700;color:var(--sage);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px}
+.ai-content{font-size:.9rem;color:var(--ink);line-height:1.75}
+.ai-content h4{font-size:.92rem;font-weight:700;color:var(--sage-dark);margin:14px 0 5px}
+.ai-content p{margin-bottom:8px}
+.ai-content ul{padding-left:18px;margin-bottom:8px}
+.ai-content li{margin-bottom:4px}
+.ai-loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.88rem}
+.ai-spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--sage);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.err-box{background:var(--red-light);color:var(--red);border:1px solid rgba(201,64,64,.2);border-radius:10px;padding:12px 16px;font-size:.87rem;margin-top:16px;display:none}
+
+/* ═══ HISTORY PAGE ═══ */
+.history-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+.filter-btn{background:var(--card);border:1.5px solid var(--border);color:var(--ink);padding:8px 16px;border-radius:999px;font-size:.83rem;font-weight:500;cursor:pointer;transition:all .15s}
+.filter-btn:hover,.filter-btn.active{background:var(--sage);color:#fff;border-color:var(--sage)}
+.history-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.hist-card{
+  background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);
+  border:1px solid var(--border);overflow:hidden;cursor:pointer;
+  transition:transform .18s,box-shadow .18s;
+}
+.hist-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.hist-img{height:160px;object-fit:cover;width:100%;display:block;background:var(--border)}
+.hist-body{padding:16px}
+.hist-status{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-radius:999px;padding:3px 10px;margin-bottom:8px}
+.hist-status.healthy{background:var(--sage-light);color:var(--sage)}
+.hist-status.disease{background:var(--red-light);color:var(--red)}
+.hist-disease{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--ink);margin-bottom:4px}
+.hist-conf{font-size:.82rem;color:var(--muted)}
+.hist-date{font-size:.77rem;color:#aab8af;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.hist-del{float:right;background:none;border:none;color:#ccc;font-size:.85rem;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color .15s}
+.hist-del:hover{color:var(--red)}
+.empty-state{text-align:center;padding:56px 24px;color:var(--muted)}
+.empty-state .big-ico{font-size:3.5rem;margin-bottom:16px;opacity:.4}
+.empty-state h3{font-family:'Fraunces',serif;font-size:1.3rem;color:var(--ink);margin-bottom:8px}
+.empty-state p{font-size:.9rem;line-height:1.6}
+
+/* ═══ PROFILE PAGE ═══ */
+.profile-header{
+  background:linear-gradient(135deg,var(--sage-dark) 0%,var(--sage) 100%);
+  border-radius:var(--r);padding:32px;display:flex;align-items:center;gap:24px;
+  margin-bottom:28px;box-shadow:var(--shadow-lg);
+}
+.profile-avatar-lg{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.8rem;font-weight:700;color:#fff;border:3px solid rgba(255,255,255,.3);flex-shrink:0}
+.profile-name{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;color:#fff}
+.profile-email{font-size:.87rem;color:rgba(255,255,255,.7);margin-top:3px}
+.profile-joined{font-size:.77rem;color:rgba(255,255,255,.5);margin-top:6px}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.stat-card{background:var(--card);border-radius:var(--r-sm);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border);text-align:center}
+.stat-card .n{font-family:'Fraunces',serif;font-size:2rem;font-weight:700;color:var(--sage)}
+.stat-card .l{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.settings-card{background:var(--card);border-radius:var(--r);padding:28px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:18px}
+.settings-card h3{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-row .info h4{font-size:.9rem;font-weight:600}
+.setting-row .info p{font-size:.8rem;color:var(--muted);margin-top:2px}
+.toggle{width:44px;height:24px;background:var(--border);border-radius:999px;position:relative;cursor:pointer;transition:background .18s;flex-shrink:0}
+.toggle.on{background:var(--sage)}
+.toggle::after{content:'';width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:transform .18s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(20px)}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border-radius:var(--r);max-width:640px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 80px rgba(0,0,0,.3)}
+.modal-head{padding:24px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:600}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;padding:2px 8px;border-radius:6px;transition:color .15s}
+.modal-close:hover{color:var(--ink)}
+.modal-body{padding:24px 28px}
+
+/* ═══ TOAST ═══ */
+.toast{
+  position:fixed;bottom:28px;right:28px;z-index:9999;
+  background:var(--ink);color:#fff;padding:13px 20px;border-radius:var(--r-sm);
+  font-size:.88rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.3);
+  transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);
+  max-width:320px;pointer-events:none;
+}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:var(--sage-dark)}
+.toast.error{background:var(--red)}
+
+/* ═══ ABOUT PAGE ═══ */
+.about-hero{background:linear-gradient(140deg,var(--sage-dark),var(--sage));padding:56px 24px;text-align:center}
+.about-hero h1{font-family:'Fraunces',serif;font-size:2.4rem;color:#fff;margin-bottom:12px}
+.about-hero p{font-size:1rem;color:rgba(255,255,255,.7);max-width:500px;margin:0 auto}
+.about-content{max-width:900px;margin:0 auto;padding:56px 24px}
+.about-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-top:40px}
+.plant-card{background:var(--card);border-radius:var(--r);padding:24px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.plant-card .ico{font-size:2rem;margin-bottom:12px}
+.plant-card h3{font-family:'Fraunces',serif;font-size:1.05rem;margin-bottom:8px}
+.plant-card p{font-size:.84rem;color:var(--muted);line-height:1.65}
+.diseases-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.d-tag{background:var(--sage-light);color:var(--sage);border-radius:999px;padding:3px 10px;font-size:.74rem;font-weight:500}
+.d-tag.dis{background:var(--red-light);color:var(--red)}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .app-content{padding:20px}
+  .hero-stats{flex-direction:column}
+  .stat{border-right:none;border-bottom:1px solid rgba(255,255,255,.08)}
+  .steps{flex-direction:column;align-items:center}
+  .step::after{display:none}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .prob-name{flex:0 0 130px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ LANDING PAGE ═══════════════════ -->
+<div id="page-home" class="page active">
+  <nav class="navbar">
+    <a class="nav-brand" onclick="goto('page-home')">
+      <div class="nav-icon">🌿</div>
+      <span class="nav-name">LeafScan</span>
+    </a>
+    <div class="nav-links" id="home-nav-links">
+      <button class="nav-btn" onclick="goto('page-about')">About</button>
+      <button class="nav-btn" onclick="goto('page-login')">Sign In</button>
+      <button class="nav-btn primary" onclick="goto('page-signup')">Get Started</button>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-eyebrow"><span class="hero-dot"></span> AI-Powered Plant Health</div>
+    <h1>Identify Plant Diseases<br>with <em>Precision</em></h1>
+    <p class="hero-sub">Upload a photo of a plant leaf. LeafScan matches it against the full PlantVillage disease dataset and highlights the most likely condition in seconds.</p>
+    <div class="hero-actions">
+      <button class="hero-cta" onclick="goto('page-signup')">Start Scanning Free →</button>
+      <button class="hero-sec" onclick="goto('page-login')">Sign In</button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-n">38</div><div class="stat-l">Disease Classes</div></div>
+      <div class="stat"><div class="stat-n">14</div><div class="stat-l">Crop Types</div></div>
+      <div class="stat"><div class="stat-n">∞</div><div class="stat-l">Scans per Month</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-label">What we offer</div>
+    <div class="sec-title">Everything you need to<br>protect your plants</div>
+    <p class="sec-sub">From gardens to orchards, LeafScan gives farmers and plant enthusiasts the power of expert diagnosis.</p>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-ico green">🔬</div>
+        <h3>AI Disease Detection</h3>
+        <p>Our AI analyzes leaf images across the full PlantVillage dataset, covering apples, tomatoes, corn, grapes, potatoes, peppers, strawberries, and more.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ico amber">💊</div>
+        <h3>Treatment Plans</h3>
+        <p>Get detailed, actionable treatment recommendations including chemical, biological, and cultural methods tailored to the detected disease.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ico blue">📂</div>
+        <h3>Scan History</h3>
+        <p>Every scan is saved to your personal history. Review past diagnoses, track disease patterns over time, and share reports.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ico purple">⚡</div>
+        <h3>Instant Results</h3>
+        <p>Analysis takes seconds. No waiting, no manual lookup. Just upload and get a clear answer with confidence percentages.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="hiw-section">
+    <div class="hiw-inner">
+      <div class="sec-label">How it works</div>
+      <div class="sec-title">Three steps to diagnosis</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h4>Upload Photo</h4>
+          <p>Take a clear photo of the affected leaf and upload it</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h4>AI Analysis</h4>
+          <p>Our model identifies the disease, plant type, and severity</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h4>Get Treatment</h4>
+          <p>Receive a detailed, actionable treatment plan instantly</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cta-banner">
+    <h2>Ready to protect your plants?</h2>
+    <p>Join thousands of growers using LeafScan every day.</p>
+    <button class="btn btn-primary" style="background:#fff;color:var(--amber);font-size:1rem;padding:15px 36px" onclick="goto('page-signup')">Create Free Account</button>
+  </div>
+</div>
+
+<!-- ═══════════════════ LOGIN PAGE ═══════════════════ -->
+<div id="page-login" class="page">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span>🌿 LeafScan</span>
+        <small>Plant Disease Detection</small>
+      </div>
+      <h2 class="auth-title">Welcome back</h2>
+      <p class="auth-sub">Sign in to access your scans and history</p>
+      <div class="err-msg" id="login-err"></div>
+      <div class="suc-msg" id="login-suc"></div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="Your password"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px" onclick="doLogin()">Sign In</button>
+      <div class="auth-divider">or</div>
+      <button class="btn btn-outline" style="width:100%;justify-content:center" onclick="demoLogin()">Try Demo Account</button>
+      <div class="auth-footer">Don't have an account? <a href="#" onclick="goto('page-signup')">Sign up free</a></div>
+      <div class="auth-footer" style="margin-top:8px"><a href="#" onclick="goto('page-home')">← Back to home</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ SIGNUP PAGE ═══════════════════ -->
+<div id="page-signup" class="page">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span>🌿 LeafScan</span>
+        <small>Plant Disease Detection</small>
+      </div>
+      <h2 class="auth-title">Create your account</h2>
+      <p class="auth-sub">Start detecting plant diseases for free</p>
+      <div class="err-msg" id="signup-err"></div>
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="signup-name" placeholder="Jane Smith"/>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="signup-pass" placeholder="At least 6 characters"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px" onclick="doSignup()">Create Account</button>
+      <div class="auth-footer">Already have an account? <a href="#" onclick="goto('page-login')">Sign in</a></div>
+      <div class="auth-footer" style="margin-top:8px"><a href="#" onclick="goto('page-home')">← Back to home</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ APP PAGES (shared layout) ═══════════════════ -->
+<div id="page-app" class="page">
+  <nav class="navbar">
+    <a class="nav-brand" onclick="goto('page-home')">
+      <div class="nav-icon">🌿</div>
+      <span class="nav-name">LeafScan</span>
+    </a>
+    <div class="nav-links">
+      <button class="nav-btn" onclick="goto('page-about')">About</button>
+      <div class="nav-user">
+        <div class="avatar" id="nav-avatar" onclick="setTab('profile')">?</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Main</div>
+        <button class="sidebar-item active" id="sb-detect" onclick="setTab('detect')">
+          <div class="ico">🔬</div> Detect Disease
+        </button>
+        <button class="sidebar-item" id="sb-history" onclick="setTab('history')">
+          <div class="ico">📂</div> Scan History
+        </button>
+      </div>
+      <div class="sidebar-section" style="margin-top:8px">
+        <div class="sidebar-label">Account</div>
+        <button class="sidebar-item" id="sb-profile" onclick="setTab('profile')">
+          <div class="ico">👤</div> Profile
+        </button>
+        <button class="sidebar-item" id="sb-about" onclick="goto('page-about')">
+          <div class="ico">ℹ️</div> About
+        </button>
+        <button class="sidebar-item" onclick="doLogout()" style="color:var(--red)">
+          <div class="ico">🚪</div> Sign Out
+        </button>
+      </div>
+    </nav>
+
+    <main class="app-content">
+
+      <!-- ── DETECT TAB ── -->
+      <div id="tab-detect">
+        <div class="page-title">Detect Plant Disease</div>
+        <p class="page-sub">Upload one centered leaf on a simple background for the best match against the 38 PlantVillage plant-disease classes</p>
+
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="file-input" accept="image/*"/>
+          <div class="up-circle">🌿</div>
+          <h3>Drop your leaf photo here</h3>
+          <p>or click to browse · best results with one leaf, good light, and minimal background clutter</p>
+        </div>
+
+        <div class="preview-panel" id="preview-panel">
+          <div class="prev-wrap">
+            <div class="prev-img-box">
+              <img id="prev-img" src="" alt="Preview"/>
+            </div>
+            <div class="prev-info">
+              <div class="fname-badge" id="fname-badge">📄 <span id="fname-text">image.jpg</span></div>
+              <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px">Image ready for analysis. If the leaf is small or off-center, try a tighter photo before running detection.</p>
+              <button class="btn btn-primary" id="analyze-btn" onclick="runAnalysis()">
+                <span class="spinner" id="spin"></span>
+                <span id="btn-lbl">🔬 Detect Disease</span>
+              </button>
+              <div class="chg-link" onclick="resetDetect()">Change image</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="err-box" id="err-box"></div>
+
+        <div class="result-wrap" id="result-wrap">
+          <div class="result-card">
+            <div class="res-header" id="res-header">
+              <div class="res-emoji" id="res-emoji">🌿</div>
+              <div>
+                <div class="res-lbl">Detection Result</div>
+                <div class="res-disease-name" id="res-disease-name">—</div>
+              </div>
+            </div>
+            <div class="res-body">
+              <div class="conf-block">
+                <div class="conf-pct" id="conf-pct">—%</div>
+                <div class="conf-right">
+                  <div class="conf-label">Confidence Score</div>
+                  <div class="conf-bar"><div class="conf-fill" id="conf-fill" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="breakdown-title">Top Matches</div>
+              <div id="prob-rows"></div>
+            </div>
+          </div>
+
+          <div class="ai-panel" id="ai-panel">
+            <div class="ai-panel-title">
+              <span>✨</span> AI Analysis & Treatment
+            </div>
+            <div class="ai-content" id="ai-content">
+              <div class="ai-loading" id="ai-loading">
+                <div class="ai-spinner"></div>
+                Preparing your scan summary…
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HISTORY TAB ── -->
+      <div id="tab-history" style="display:none">
+        <div class="page-title">Scan History</div>
+        <p class="page-sub">All your previous plant disease scans</p>
+        <div class="history-filters">
+          <button class="filter-btn active" onclick="filterHistory('all',this)">All</button>
+          <button class="filter-btn" onclick="filterHistory('healthy',this)">Healthy</button>
+          <button class="filter-btn" onclick="filterHistory('disease',this)">Diseases</button>
+        </div>
+        <div class="history-grid" id="history-grid"></div>
+      </div>
+
+      <!-- ── PROFILE TAB ── -->
+      <div id="tab-profile" style="display:none">
+        <div class="page-title">My Profile</div>
+        <p class="page-sub" style="margin-bottom:24px">Manage your account and preferences</p>
+
+        <div class="profile-header">
+          <div class="profile-avatar-lg" id="prof-avatar-lg">?</div>
+          <div>
+            <div class="profile-name" id="prof-name">—</div>
+            <div class="profile-email" id="prof-email">—</div>
+            <div class="profile-joined" id="prof-joined">—</div>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card"><div class="n" id="prof-total">0</div><div class="l">Total Scans</div></div>
+          <div class="stat-card"><div class="n" id="prof-healthy">0</div><div class="l">Healthy</div></div>
+          <div class="stat-card"><div class="n" id="prof-diseases">0</div><div class="l">Diseases Found</div></div>
+        </div>
+
+        <div class="settings-card">
+          <h3>Account Settings</h3>
+          <div class="setting-row">
+            <div class="info"><h4>Email Notifications</h4><p>Receive tips and disease alerts</p></div>
+            <div class="toggle" id="tog-email" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="setting-row">
+            <div class="info"><h4>Save History</h4><p>Store your scan results</p></div>
+            <div class="toggle on" id="tog-hist" onclick="toggleSetting(this)"></div>
+          </div>
+          <div class="setting-row">
+            <div class="info"><h4>Dark Mode</h4><p>Coming soon</p></div>
+            <div class="toggle" style="opacity:.4;cursor:not-allowed"></div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3>Danger Zone</h3>
+          <div class="setting-row">
+            <div class="info"><h4>Clear All Scans</h4><p>Permanently delete your scan history</p></div>
+            <button class="btn btn-danger" onclick="clearAllScans()">Clear History</button>
+          </div>
+          <div class="setting-row">
+            <div class="info"><h4>Sign Out</h4><p>Sign out of your account</p></div>
+            <button class="btn btn-outline" onclick="doLogout()">Sign Out</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════ ABOUT PAGE ═══════════════════ -->
+<div id="page-about" class="page">
+  <nav class="navbar">
+    <a class="nav-brand" onclick="goto('page-home')">
+      <div class="nav-icon">🌿</div>
+      <span class="nav-name">LeafScan</span>
+    </a>
+    <div class="nav-links" id="about-nav-links">
+      <button class="nav-btn" onclick="goBack()">← Back</button>
+    </div>
+  </nav>
+
+  <div class="about-hero">
+    <h1>About LeafScan</h1>
+    <p>An AI-powered plant disease detection platform supporting farmers and growers worldwide</p>
+  </div>
+
+  <div class="about-content">
+    <div class="sec-title" style="margin-bottom:12px">Supported Plants & Diseases</div>
+    <p style="color:var(--muted);font-size:.92rem;margin-bottom:8px">Our AI can analyze leaves from many common plant families and detect a wide range of diseases, including:</p>
+    <div class="about-grid">
+      <div class="plant-card">
+        <div class="ico">🍎</div>
+        <h3>Apple</h3>
+        <p>Included in the shared 38-class PlantVillage model</p>
+        <div class="diseases-list">
+          <span class="d-tag dis">Apple Scab</span>
+          <span class="d-tag dis">Black Rot</span>
+          <span class="d-tag dis">Cedar Apple Rust</span>
+          <span class="d-tag">Healthy</span>
+        </div>
+      </div>
+      <div class="plant-card">
+        <div class="ico">🍅</div>
+        <h3>Tomato</h3>
+        <p>Multiple tomato diseases are covered in the same exported model</p>
+        <div class="diseases-list">
+          <span class="d-tag dis">Early Blight</span>
+          <span class="d-tag dis">Late Blight</span>
+          <span class="d-tag dis">Septoria Leaf Spot</span>
+          <span class="d-tag">Healthy</span>
+        </div>
+      </div>
+      <div class="plant-card">
+        <div class="ico">🌽</div>
+        <h3>Corn / Maize</h3>
+        <p>Common corn leaf diseases are supported in the PlantVillage class set</p>
+        <div class="diseases-list">
+          <span class="d-tag dis">Northern Leaf Blight</span>
+          <span class="d-tag dis">Common Rust</span>
+          <span class="d-tag dis">Gray Leaf Spot</span>
+          <span class="d-tag">Healthy</span>
+        </div>
+      </div>
+      <div class="plant-card">
+        <div class="ico">🍇</div>
+        <h3>Grape</h3>
+        <p>Grape leaf disease identification is included in the same multi-crop model</p>
+        <div class="diseases-list">
+          <span class="d-tag dis">Black Rot</span>
+          <span class="d-tag dis">Esca</span>
+          <span class="d-tag dis">Leaf Blight</span>
+          <span class="d-tag">Healthy</span>
+        </div>
+      </div>
+      <div class="plant-card">
+        <div class="ico">🥔</div>
+        <h3>Potato</h3>
+        <p>Potato blight and healthy leaves are supported in the shared model</p>
+        <div class="diseases-list">
+          <span class="d-tag dis">Early Blight</span>
+          <span class="d-tag dis">Late Blight</span>
+          <span class="d-tag">Healthy</span>
+        </div>
+      </div>
+      <div class="plant-card">
+        <div class="ico">🌶️</div>
+        <h3>Other Plants</h3>
+        <p>The dataset also covers pepper, peach, cherry, strawberry, orange, blueberry, soybean, squash, and more</p>
+        <div class="diseases-list">
+          <span class="d-tag">Strawberry</span>
+          <span class="d-tag">Peach</span>
+          <span class="d-tag">Cherry</span>
+          <span class="d-tag">+ more</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:52px">
+      <div class="sec-title" style="margin-bottom:12px">How the AI works</div>
+      <p style="color:var(--muted);font-size:.92rem;line-height:1.75;max-width:680px">
+        LeafScan now uses one TensorFlow model trained on the PlantVillage dataset. The backend resizes the
+        uploaded image, runs multi-class prediction across 38 plant-disease categories, and returns the most
+        likely match plus the strongest alternative classes to the website in real time.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Scan Detail</h3>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const FLASK_BASE = 'http://localhost:5000';
+
+let currentPage = 'page-home';
+let prevPage = 'page-home';
+let currentTab = 'detect';
+let currentUser = null;
+let selectedFile = null;
+
+// Simple localStorage DB
+const DB = {
+  getUsers: () => JSON.parse(localStorage.getItem('ls_users') || '{}'),
+  saveUsers: (u) => localStorage.setItem('ls_users', JSON.stringify(u)),
+  getHistory: (uid) => JSON.parse(localStorage.getItem(`ls_hist_${uid}`) || '[]'),
+  saveHistory: (uid, h) => localStorage.setItem(`ls_hist_${uid}`, JSON.stringify(h)),
+  getSession: () => localStorage.getItem('ls_session'),
+  saveSession: (uid) => localStorage.setItem('ls_session', uid),
+  clearSession: () => localStorage.removeItem('ls_session'),
+};
+
+// ══════════════════════════════════════════════
+//  ROUTING
+// ══════════════════════════════════════════════
+function goto(pageId) {
+  prevPage = currentPage;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  currentPage = pageId;
+  window.scrollTo(0,0);
+}
+
+function goBack() { goto(prevPage); }
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = 'block';
+  document.querySelectorAll('[id^="sb-"]').forEach(b => b.classList.remove('active'));
+  const sb = document.getElementById('sb-' + tab);
+  if (sb) sb.classList.add('active');
+  if (tab === 'history') renderHistory();
+  if (tab === 'profile') renderProfile();
+  goto('page-app');
+}
+
+// ══════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════
+function doSignup() {
+  const name  = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('signup-pass').value;
+  const err   = document.getElementById('signup-err');
+  err.style.display = 'none';
+  if (!name || !email || !pass) { showAuthErr(err, 'Please fill in all fields.'); return; }
+  if (pass.length < 6)          { showAuthErr(err, 'Password must be at least 6 characters.'); return; }
+  const users = DB.getUsers();
+  if (users[email])             { showAuthErr(err, 'An account with this email already exists.'); return; }
+  const uid = 'u_' + Date.now();
+  users[email] = { uid, name, email, pass, joined: new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) };
+  DB.saveUsers(users);
+  DB.saveSession(uid);
+  currentUser = users[email];
+  toast('Account created! Welcome, ' + name + ' 🎉', 'success');
+  enterApp();
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('login-pass').value;
+  const err   = document.getElementById('login-err');
+  err.style.display = 'none';
+  const users = DB.getUsers();
+  const user  = Object.values(users).find(u => u.email === email);
+  if (!user || user.pass !== pass) { showAuthErr(err, 'Incorrect email or password.'); return; }
+  DB.saveSession(user.uid);
+  currentUser = user;
+  toast('Welcome back, ' + user.name + '! 👋', 'success');
+  enterApp();
+}
+
+function demoLogin() {
+  const users = DB.getUsers();
+  let demo = Object.values(users).find(u => u.email === 'demo@leafscan.app');
+  if (!demo) {
+    const uid = 'u_demo';
+    demo = { uid, name: 'Demo User', email: 'demo@leafscan.app', pass: 'demo123', joined: 'January 1, 2025' };
+    users[demo.email] = demo;
+    DB.saveUsers(users);
+    // Seed some history
+    const seed = [
+      { id: 's1', date: '2025-11-10', plantType:'Apple', disease:'Apple Scab', isHealthy:false, confidence:91.2, imageUrl:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Apple_scab_leaf.jpg/320px-Apple_scab_leaf.jpg', summary:'Fungal disease causing dark, scabby lesions on apple leaves.' },
+      { id: 's2', date: '2025-11-15', plantType:'Apple', disease:'Healthy', isHealthy:true, confidence:97.4, imageUrl:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Apple_leaf.jpg/320px-Apple_leaf.jpg', summary:'No disease detected. Plant appears healthy.' },
+      { id: 's3', date: '2025-12-03', plantType:'Tomato', disease:'Early Blight', isHealthy:false, confidence:88.5, imageUrl:'', summary:'Early blight (Alternaria solani) detected on tomato leaf.' },
+    ];
+    DB.saveHistory('u_demo', seed);
+  }
+  DB.saveSession(demo.uid);
+  currentUser = demo;
+  toast('Signed in as Demo User 🎉', 'success');
+  enterApp();
+}
+
+function enterApp() {
+  const first = currentUser.name.split(' ')[0];
+  document.getElementById('nav-avatar').textContent = first[0].toUpperCase();
+  goto('page-app');
+  setTab('detect');
+}
+
+function doLogout() {
+  DB.clearSession();
+  currentUser = null;
+  selectedFile = null;
+  resetDetect();
+  goto('page-home');
+  toast('Signed out successfully.');
+}
+
+function showAuthErr(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// Auto-login from session
+window.addEventListener('DOMContentLoaded', () => {
+  const uid = DB.getSession();
+  if (uid) {
+    const users = DB.getUsers();
+    const user = Object.values(users).find(u => u.uid === uid);
+    if (user) {
+      currentUser = user;
+      enterApp();
+      return;
+    }
+  }
+});
+
+// ══════════════════════════════════════════════
+//  DETECT
+// ══════════════════════════════════════════════
+const uploadZone = document.getElementById('upload-zone');
+const fileInput  = document.getElementById('file-input');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(f) {
+  if (!f.type.startsWith('image/')) { showErr('Please upload an image file.'); return; }
+  selectedFile = f;
+  document.getElementById('prev-img').src = URL.createObjectURL(f);
+  document.getElementById('fname-text').textContent = f.name;
+  uploadZone.style.display = 'none';
+  document.getElementById('preview-panel').style.display = 'block';
+  document.getElementById('result-wrap').style.display = 'none';
+  hideErr();
+}
+
+function resetDetect() {
+  selectedFile = null;
+  if (fileInput) fileInput.value = '';
+  uploadZone.style.display = 'block';
+  document.getElementById('preview-panel').style.display = 'none';
+  document.getElementById('result-wrap').style.display = 'none';
+  hideErr();
+}
+
+async function runAnalysis() {
+  if (!selectedFile) return;
+  setBusy(true);
+  document.getElementById('result-wrap').style.display = 'none';
+  hideErr();
+  showAIOnlyPlaceholder();
+  try {
+    const fd = new FormData();
+    fd.append('image', selectedFile);
+    const r = await fetch('http://localhost:5000/analyze', { method: 'POST', body: fd });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.error || 'Server error ' + r.status);
+    }
+    const data = await r.json();
+    const mr = data.model_result;
+    if (mr) { renderModelResult(mr); } else { updateResultFromAI(data.ai_html || ''); }
+    document.getElementById('ai-content').innerHTML = data.ai_html || '<p>No analysis returned.</p>';
+    saveToHistory(data.ai_html || '', mr);
+  } catch (e) {
+    document.getElementById('result-wrap').style.display = 'none';
+    showErr(
+      'Cannot connect to the Flask backend. Make sure:\n' +
+      '1. python app.py is running\n' +
+      '2. The PlantVillage model exists in saved_models/1\n' +
+      '3. You are opening the site while the backend is running on http://localhost:5000\n\nError: ' + e.message
+    );
+  }
+  setBusy(false);
+}
+
+function renderModelResult(data) {
+  const h = data.is_healthy;
+  const label = data.display_name || (data.predicted_class.split('___')[1] || data.predicted_class).replace(/_/g, ' ');
+  const hdr = document.getElementById('res-header');
+  hdr.className = 'res-header ' + (h ? 'healthy' : 'disease');
+  hdr.style.background = '';
+  document.getElementById('res-emoji').textContent = h ? '🌿' : '⚠️';
+  document.getElementById('res-disease-name').textContent = label;
+  document.getElementById('conf-pct').textContent = data.confidence + '%';
+  document.getElementById('conf-pct').className = 'conf-pct ' + (h ? 'healthy' : 'disease');
+  const fill = document.getElementById('conf-fill');
+  fill.className = 'conf-fill ' + (h ? 'healthy' : 'disease');
+  fill.style.width = '0%';
+  setTimeout(() => fill.style.width = data.confidence + '%', 60);
+  const rows = document.getElementById('prob-rows');
+  rows.innerHTML = '';
+  (data.all_probabilities || []).forEach(item => {
+    const lbl = (item.class.split('___')[1] || item.class).replace(/_/g, ' ');
+    const row = document.createElement('div'); row.className = 'prob-row';
+    row.innerHTML = `<div class="prob-name" title="${lbl}">${lbl}</div>
+      <div class="prob-track"><div class="prob-bar ${item.healthy?'healthy':'disease'}" style="width:0%" data-v="${item.probability}"></div></div>
+      <div class="prob-pct">${item.probability}%</div>`;
+    rows.appendChild(row);
+  });
+  setTimeout(() => rows.querySelectorAll('.prob-bar').forEach(el => el.style.width = el.dataset.v + '%'), 100);
+  document.getElementById('result-wrap').style.display = 'block';
+  document.getElementById('ai-content').innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div>Preparing a PlantVillage-based result summary…</div>';
+}
+
+function showAIOnlyPlaceholder() {
+  document.getElementById('res-header').className = 'res-header';
+  document.getElementById('res-header').style.background = 'linear-gradient(135deg,#4a5568,#718096)';
+  document.getElementById('res-emoji').textContent = '🤖';
+  document.getElementById('res-disease-name').textContent = 'Analyzing leaf…';
+  document.getElementById('conf-pct').textContent = '—';
+  document.getElementById('prob-rows').innerHTML = '';
+  document.getElementById('result-wrap').style.display = 'block';
+  document.getElementById('ai-content').innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div>Analyzing your leaf against the PlantVillage model…</div>';
+}
+
+
+function updateResultFromAI(htmlText) {
+  // Extract a simple diagnosis line from the AI html
+  const tmp = document.createElement('div');
+  tmp.innerHTML = htmlText;
+  const firstH4 = tmp.querySelector('h4');
+  const firstP  = tmp.querySelector('p');
+  const diagText = firstH4 ? firstH4.textContent : (firstP ? firstP.textContent.slice(0,60) : 'See AI Analysis');
+  const isHealthy = /healthy|no disease/i.test(diagText);
+  const hdr = document.getElementById('res-header');
+  hdr.className = 'res-header ' + (isHealthy ? 'healthy' : 'disease');
+  hdr.style.background = '';
+  document.getElementById('res-emoji').textContent = isHealthy ? '🌿' : '⚠️';
+  document.getElementById('res-disease-name').textContent = diagText.length > 50 ? diagText.slice(0,50)+'…' : diagText;
+  document.getElementById('conf-pct').textContent = 'AI';
+  document.getElementById('conf-pct').className = 'conf-pct ' + (isHealthy ? 'healthy' : 'disease');
+  document.getElementById('prob-rows').innerHTML = '<p style="font-size:.83rem;color:var(--muted)">Detailed probabilities available with Flask model running locally.</p>';
+}
+
+function saveToHistory(aiText, modelResult) {
+  if (!currentUser) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = aiText;
+  const summary = tmp.textContent.slice(0,120).trim();
+  const firstH4 = tmp.querySelector('h4');
+  const diagText = firstH4 ? firstH4.textContent : 'Analysis Complete';
+  const isHealthy = !!(modelResult?.is_healthy) || /healthy|no disease/i.test(diagText);
+  const disease = modelResult
+    ? (modelResult.disease_name || modelResult.display_name || (modelResult.predicted_class.split('___')[1] || modelResult.predicted_class).replace(/_/g,' '))
+    : diagText;
+  const plantType = modelResult
+    ? (modelResult.plant_name || 'Plant')
+    : (aiText.match(/tomato|corn|grape|potato|pepper|strawberry|apple|peach|cherry|orange|blueberry|raspberry|soybean|squash/i)?.[0] || 'Plant');
+
+  const entry = {
+    id: 's_' + Date.now(),
+    date: new Date().toISOString().split('T')[0],
+    plantType: plantType.charAt(0).toUpperCase()+plantType.slice(1),
+    disease,
+    isHealthy,
+    confidence: modelResult ? modelResult.confidence : null,
+    imageUrl: document.getElementById('prev-img').src,
+    summary,
+    aiHtml: aiText,
+  };
+  const hist = DB.getHistory(currentUser.uid);
+  hist.unshift(entry);
+  DB.saveHistory(currentUser.uid, hist.slice(0, 100));
+  toast('Scan saved to history 📂', 'success');
+}
+
+// ══════════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════════
+let histFilter = 'all';
+
+function filterHistory(f, btn) {
+  histFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderHistory();
+}
+
+function renderHistory() {
+  const grid = document.getElementById('history-grid');
+  if (!currentUser) { grid.innerHTML = '<p>Please sign in.</p>'; return; }
+  let hist = DB.getHistory(currentUser.uid);
+  if (histFilter === 'healthy') hist = hist.filter(h => h.isHealthy);
+  if (histFilter === 'disease') hist = hist.filter(h => !h.isHealthy);
+  if (!hist.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="big-ico">📂</div>
+      <h3>No scans yet</h3>
+      <p>Your scan history will appear here after you analyze your first leaf image.</p>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="setTab('detect')">Scan a leaf</button>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = hist.map(h => `
+    <div class="hist-card" onclick="viewHistDetail('${h.id}')">
+      ${h.imageUrl ? `<img class="hist-img" src="${h.imageUrl}" onerror="this.style.display='none'">` : '<div class="hist-img" style="display:flex;align-items:center;justify-content:center;font-size:2.5rem;background:var(--sage-light)">🌿</div>'}
+      <div class="hist-body">
+        <div class="hist-status ${h.isHealthy?'healthy':'disease'}">${h.isHealthy?'✓ Healthy':'⚠ Disease'}</div>
+        <div class="hist-disease">${h.disease}</div>
+        <div class="hist-conf">${h.plantType} ${h.confidence ? '· ' + h.confidence + '% confidence' : ''}</div>
+        <div class="hist-date">
+          📅 ${h.date}
+          <button class="hist-del" onclick="event.stopPropagation();deleteHistEntry('${h.id}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function viewHistDetail(id) {
+  if (!currentUser) return;
+  const hist = DB.getHistory(currentUser.uid);
+  const entry = hist.find(h => h.id === id);
+  if (!entry) return;
+  document.getElementById('modal-title').textContent = entry.disease;
+  document.getElementById('modal-body').innerHTML = `
+    ${entry.imageUrl ? `<img src="${entry.imageUrl}" style="width:100%;border-radius:10px;margin-bottom:16px;max-height:240px;object-fit:cover" onerror="this.style.display='none'">` : ''}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <span class="hist-status ${entry.isHealthy?'healthy':'disease'}">${entry.isHealthy?'✓ Healthy':'⚠ Disease'}</span>
+      <span style="background:var(--sage-light);color:var(--sage);border-radius:999px;padding:3px 12px;font-size:.78rem;font-weight:600">${entry.plantType}</span>
+      ${entry.confidence ? `<span style="background:var(--amber-light);color:var(--amber);border-radius:999px;padding:3px 12px;font-size:.78rem;font-weight:600">${entry.confidence}% confidence</span>` : ''}
+    </div>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">📅 Scanned on ${entry.date}</p>
+    ${entry.aiHtml ? `<div style="font-size:.88rem;line-height:1.7">${entry.aiHtml}</div>` : `<p style="font-size:.88rem;color:var(--muted)">${entry.summary}</p>`}
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function deleteHistEntry(id) {
+  if (!currentUser) return;
+  let hist = DB.getHistory(currentUser.uid);
+  hist = hist.filter(h => h.id !== id);
+  DB.saveHistory(currentUser.uid, hist);
+  renderHistory();
+  toast('Scan deleted.');
+}
+
+function clearAllScans() {
+  if (!currentUser) return;
+  if (!confirm('Delete ALL scan history? This cannot be undone.')) return;
+  DB.saveHistory(currentUser.uid, []);
+  renderHistory();
+  renderProfile();
+  toast('All scans cleared.');
+}
+
+// ══════════════════════════════════════════════
+//  PROFILE
+// ══════════════════════════════════════════════
+function renderProfile() {
+  if (!currentUser) return;
+  const first = currentUser.name.split(' ')[0];
+  document.getElementById('prof-avatar-lg').textContent = currentUser.name[0].toUpperCase();
+  document.getElementById('prof-name').textContent = currentUser.name;
+  document.getElementById('prof-email').textContent = currentUser.email;
+  document.getElementById('prof-joined').textContent = '📅 Member since ' + (currentUser.joined || 'N/A');
+  const hist = DB.getHistory(currentUser.uid);
+  document.getElementById('prof-total').textContent = hist.length;
+  document.getElementById('prof-healthy').textContent = hist.filter(h => h.isHealthy).length;
+  document.getElementById('prof-diseases').textContent = hist.filter(h => !h.isHealthy).length;
+}
+
+function toggleSetting(el) {
+  el.classList.toggle('on');
+}
+
+// ══════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════
+function setBusy(b) {
+  const btn = document.getElementById('analyze-btn');
+  const lbl = document.getElementById('btn-lbl');
+  const sp  = document.getElementById('spin');
+  btn.disabled = b;
+  lbl.textContent = b ? 'Analysing…' : '🔬 Detect Disease';
+  sp.style.display = b ? 'block' : 'none';
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err-box');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function hideErr() {
+  const el = document.getElementById('err-box');
+  if (el) el.style.display = 'none';
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+
+function closeModalDirect() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// Keyboard: Escape closes modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModalDirect();
+});
+</script>
+</body>
+</html>
